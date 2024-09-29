@@ -1,101 +1,129 @@
-import Image from "next/image";
+'use client';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import Card from './components/Card';
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+export default function Dashboard() {
+    const [products, setProducts] = useState([]);
+    const [customers, setCustomers] = useState([]);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [quantity, setQuantity] = useState(1);
+    const [selectedCustomer, setSelectedCustomer] = useState('');
+    const [showModal, setShowModal] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    useEffect(() => {
+        async function fetchProducts() {
+            const res = await fetch('/api/products');
+            const data = await res.json();
+            setProducts(data.data);
+        }
+        fetchProducts();
+        async function fetchCustomers() {
+            const res = await fetch('/api/customers');
+            const data = await res.json();
+            setCustomers(data.data);
+        }
+        fetchCustomers();
+    }, []);
+
+    const handleBuyClick = (product) => {
+        setSelectedProduct(product);
+        setShowModal(true);
+    };
+
+    const handleSubmitOrder = async () => {
+        const orderData = {
+            productId: selectedProduct._id,
+            customerId: selectedCustomer,
+            quantity,
+        };
+
+        const response = await fetch('/api/orders', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderData),
+        });
+
+        if (response.ok) {
+            alert('Order successfully placed!');
+            setShowModal(false);  // Close the modal
+        } else {
+            const errorData = await response.json();
+            console.error('Error creating order:', errorData);
+        }
+    };
+
+    return (
+        <div className="page-container">
+            <header>
+                <h1>Dashboard</h1>
+            </header>
+
+            <div className="manage-buttons">
+                <Link href="/products">
+                    <button className="manage-button">Manage Products</button>
+                </Link>
+                <Link href="/customers">
+                    <button className="manage-button">Manage Customers</button>
+                </Link>
+                <Link href="/orders">
+                    <button className="manage-button">View Orders</button>
+                </Link>
+            </div>
+
+            <h2>Products</h2>
+            <div className="card-grid">
+                {products.map((product) => (
+                    <Card
+                        key={product._id}
+                        product={product}
+                        title={product.name}
+                        description={`Price: $${product.price} - Seller: ${product.sellerName}`}
+                        imageUrl={product.image}
+                        isDashboard={true} // Only show the "Buy" button
+                        onBuyClick={() => handleBuyClick(product)}  // Show only Buy button
+                    />
+                ))}
+            </div>
+
+            {/* Modal for order submission */}
+            {showModal && (
+                <div className="modal">
+                    <div className="modal-content">
+                        <h2>Place Order for {selectedProduct.name}</h2>
+                        <label>Customer:</label>
+                        <select
+                            value={selectedCustomer}
+                            onChange={(e) => setSelectedCustomer(e.target.value)}
+                        >
+                            <option value="">Select Customer</option>
+                            {customers.map((customer) => (
+                                <option key={customer._id} value={customer._id}>
+                                    {customer.name}
+                                </option>
+                            ))}
+                        </select>
+                        <br></br>
+                        <br></br>
+                        <label>Quantity:</label>
+                        <input
+                            type="number"
+                            value={quantity}
+                            onChange={(e) => setQuantity(e.target.value)}
+                            min="1"
+                        />
+                        <br></br>
+                        <button onClick={handleSubmitOrder}>Confirm Order</button>
+                        <button onClick={() => setShowModal(false)}>Cancel</button>
+                    </div>
+                </div>
+            )}
+
+            <footer>
+                <p>© 2024 XO TechZone</p>
+            </footer>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+    );
 }
